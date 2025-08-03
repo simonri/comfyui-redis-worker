@@ -146,3 +146,6 @@ comfyui-output/**/*
 
 comfyui-models/**/*
 !comfyui-models/.gitkeep
+
+comfyui-input/**/*
+!comfyui-input/test-video.mp4

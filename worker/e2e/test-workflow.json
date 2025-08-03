@@ -1,26 +1,24 @@
 {
-  "4": {
+  "7": {
     "inputs": {
-      "filename_prefix": "video/ComfyUI",
-      "format": "auto",
-      "codec": "auto",
-      "video": [
-        "5",
+      "image": "input-image.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "8": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "7",
         0
       ]
     },
-    "class_type": "SaveVideo",
+    "class_type": "SaveImage",
     "_meta": {
-      "title": "Save Video"
-    }
-  },
-  "5": {
-    "inputs": {
-      "file": "test-video.mp4"
-    },
-    "class_type": "LoadVideo",
-    "_meta": {
-      "title": "Load Video"
+      "title": "Save Image"
     }
   }
 }

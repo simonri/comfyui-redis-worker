@@ -1,29 +1,29 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Config } from "../src/config";
-import { setupQueues } from "../src/bullmq";
+import { setupQueues, type JobData } from "../src/bullmq";
 import { Queue } from "bullmq";
 import { mockWebhooks } from "./mockApi";
 import path from "path";
 import { CreateBucketCommand, S3Client } from "@aws-sdk/client-s3";
 import nock from "nock";
+import testWorkflow from "./test-workflow.json";
+import fs from "fs";
 
 const TEST_QUEUE_NAME = "test-queue";
 const TEST_JOB_NAME = "test-job";
 
-const redisUrl = "redis://localhost:6379";
+const redisUrl = "redis://localhost:6380";
 const bucketName = "test-bucket";
 
 describe("Worker E2E Tests", () => {
-  let testQueue: Queue;
+  let testQueue: Queue<JobData>;
   let webhook: nock.Scope;
-  let workflow: nock.Scope;
   let getWebhookBody: () => any;
 
   beforeAll(async () => {
     const config = new Config({
       comfyuiApiUrl: "http://localhost:8188",
       completeWebhookUrl: "http://api.example.com/webhook",
-      workflowApiUrl: "http://api.example.com/workflow",
       redisUrl: redisUrl,
       queueName: TEST_QUEUE_NAME,
       jobName: TEST_JOB_NAME,
@@ -65,7 +65,6 @@ describe("Worker E2E Tests", () => {
   beforeEach(async () => {
     const mocks = mockWebhooks();
     webhook = mocks.webhook;
-    workflow = mocks.workflow;
     getWebhookBody = mocks.getWebhookBody;
 
     await testQueue.drain();
@@ -76,14 +75,24 @@ describe("Worker E2E Tests", () => {
   });
 
   it("should process job end-to-end", async () => {
+    const image = fs.readFileSync(path.join(__dirname, "test-image.png"));
+    const imageBase64 = image.toString("base64");
+
     await testQueue.add(TEST_JOB_NAME, {
       jobId: "123",
+      workflow: testWorkflow,
+      outputNode: "8",
+      images: [
+        {
+          name: "input-image.png",
+          imageBase64: imageBase64,
+        },
+      ],
     });
 
     await new Promise((resolve) => setTimeout(resolve, 4000));
 
     expect(webhook.isDone()).toBe(true);
-    expect(workflow.isDone()).toBe(true);
 
     const webhookBody = getWebhookBody();
     expect(webhookBody).toBeDefined();
@@ -94,14 +103,24 @@ describe("Worker E2E Tests", () => {
   });
 
   it("should process multiple jobs", async () => {
+    const image = fs.readFileSync(path.join(__dirname, "test-image.png"));
+    const imageBase64 = image.toString("base64");
+
     await testQueue.add(TEST_JOB_NAME, {
       jobId: "123",
+      outputNode: "8",
+      workflow: testWorkflow,
+      images: [
+        {
+          name: "input-image.png",
+          imageBase64: imageBase64,
+        },
+      ],
     });
 
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
     expect(webhook.isDone()).toBe(true);
-    expect(workflow.isDone()).toBe(true);
 
     const webhookBody1 = getWebhookBody();
     expect(webhookBody1).toBeDefined();
@@ -112,12 +131,19 @@ describe("Worker E2E Tests", () => {
 
     await testQueue.add(TEST_JOB_NAME, {
       jobId: "321",
+      outputNode: "8",
+      workflow: testWorkflow,
+      images: [
+        {
+          name: "input-image.png",
+          imageBase64: imageBase64,
+        },
+      ],
     });
 
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
     expect(webhook.isDone()).toBe(true);
-    expect(workflow.isDone()).toBe(true);
 
     const webhookBody2 = getWebhookBody();
     expect(webhookBody2).toBeDefined();

@@ -6,21 +6,20 @@ Jobs are submitted to the worker via Redis. A request may look like this:
 
 ```json
 {
-  "jobId": "123"
-}
-```
-
-### Workflow Endpoint
-
-The worker will fetch the workflow from the `GET ${WORKFLOW_API_URL}/{id}` endpoint and process the job. The workflow endpoint is expected to return a JSON object with the following format:
-
-```json
-{
-  "id": "123",
-  "outputNode": "output_node",
-  "data": {
-    // workflow data api format
-  }
+  "jobId": "123",
+  "workflow": {
+    "1": {
+      "inputs": {},
+      "class_type": "LoadImage"
+    }
+  },
+  "images": [
+    {
+      "name": "test.jpg",
+      "imageBase64": "base64data"
+    }
+  ],
+  "outputNode": "4"
 }
 ```
 
@@ -45,7 +44,6 @@ The following table lists the available environment variables and their default 
 | --------------------- | -------------- | ------------------- |
 | COMFYUI_API_URL       |          | The URL of the ComfyUI API.                       |
 | COMPLETE_WEBHOOK_URL  |          | The URL of the webhook to call when the job is complete.    |
-| WORKFLOW_API_URL      |          | The URL of the workflow API.                      |
 | REDIS_URL             |          | The URL of the Redis server.                      |
 | QUEUE_NAME            |          | The name of the queue to use.                     |
 | JOB_NAME              |          | The name of the job to process.                   |
