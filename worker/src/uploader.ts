@@ -1,9 +1,18 @@
 import fs from "fs/promises";
 import type { Config } from "./config";
-import { getS3Client } from "./s3-client";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 export async function uploadVideoToS3(filePath: string, destKey: string, config: Config) {
-  const s3Client = getS3Client(config.getS3());
+  const s3Config = config.getS3();
+
+  const s3Client = new S3Client({
+    credentials: {
+      accessKeyId: s3Config.accessKeyId,
+      secretAccessKey: s3Config.secretAccessKey,
+    },
+    endpoint: s3Config.endpoint,
+    region: "auto",
+  });
 
   const stats = await fs.stat(filePath);
   if (!stats.isFile()) {
@@ -11,11 +20,12 @@ export async function uploadVideoToS3(filePath: string, destKey: string, config:
   }
 
   const fileStream = await fs.readFile(filePath);
-  const s3file = s3Client.file(destKey);
-
-  await s3file.write(fileStream, {
-    type: "video/mp4",
-  });
+  await s3Client.send(new PutObjectCommand({
+    Bucket: config.getS3().bucket,
+    Key: destKey,
+    Body: fileStream,
+    ContentType: "video/mp4",
+  }));
 
   return destKey;
 }
