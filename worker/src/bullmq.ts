@@ -3,8 +3,18 @@ import { Redis } from "ioredis";
 import { processJob } from "./worker";
 import { Config } from "./config";
 
-interface JobData {
+interface ImageInput {
+  name: string;
+  imageBase64: string;
+}
+
+export interface JobData {
   jobId: string;
+  outputNode: string;
+  workflow: {
+    [key: string]: any;
+  };
+  images: ImageInput[];
 }
 
 export function setupQueues(config: Config) {
@@ -18,7 +28,7 @@ export function setupQueues(config: Config) {
     config.getQueueName(),
     async (job) => {
       if (job.name === config.getJobName()) {
-        await processJob(job.data.jobId, config);
+        await processJob(job.data, config);
       }
     },
     { connection }

@@ -87,4 +87,25 @@ describe("ComfyApi", () => {
       status: { completed: true }
     });
   });
+
+  it("uploadImage sends request to correct endpoint and returns response", async () => {
+    const res = makeFetchResponse(200, {
+      image_key: "123"
+    });
+    fetchSpy.mockResolvedValue(res);
+
+    const imageName = "test.png";
+    const imageBase64 = "test";
+    const result = await api.uploadImage(imageName, imageBase64);
+
+    expect(result).toBe(true);
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      `${host}/upload/image`,
+      {
+        method: "POST",
+        body: expect.any(FormData)
+      }
+    );
+  });
 });

@@ -1,23 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { extractVideoPath, processJob } from "./worker";
 import { ComfyApi } from "./comfyui/client";
-import { getWorkflowById, handleJobCompleted } from "./api";
+import { handleJobCompleted } from "./api";
 import { Config } from "./config";
 import { sleep } from "./utils";
 import type { QueuePromptResponse, HistoryEntry } from "./comfyui/types";
+import type { JobData } from "./bullmq";
 
 vi.mock("./comfyui/client");
 vi.mock("./api");
 vi.mock("./utils");
 
 const MockedComfyApi = vi.mocked(ComfyApi);
-const mockedGetWorkflowById = vi.mocked(getWorkflowById);
 const mockedHandleJobCompleted = vi.mocked(handleJobCompleted);
 const mockedSleep = vi.mocked(sleep);
 
 describe("processJob", () => {
   let mockConfig: Config;
   let mockComfyApiInstance: any;
+  let mockJobData: JobData;
 
   beforeEach(() => {
     mockConfig = {
@@ -27,30 +28,31 @@ describe("processJob", () => {
       getComfyuiOutputPath: vi.fn().mockReturnValue("test-output-path"),
     } as any;
 
+    mockJobData = {
+      jobId: "test-job-123",
+      workflow: { "1": { inputs: {}, class_type: "LoadImage" } },
+      images: [{ name: "test.jpg", imageBase64: "base64data" }],
+      outputNode: "4",
+    };
+
     mockComfyApiInstance = {
+      uploadImage: vi.fn().mockResolvedValue(true),
       queuePrompt: vi.fn(),
       getHistory: vi.fn(),
     };
 
     MockedComfyApi.mockImplementation(() => mockComfyApiInstance);
     mockedSleep.mockResolvedValue(undefined);
-
-    vi.stubGlobal('setTimeout', (callback: () => void) => {
-      callback();
-      return 1;
-    });
+    mockedHandleJobCompleted.mockResolvedValue(undefined);
 
     vi.clearAllMocks();
   });
 
   afterEach(() => {
     vi.resetAllMocks();
-    vi.unstubAllGlobals();
   });
 
   it("should successfully process a job", async () => {
-    const jobId = "test-job-123";
-    const mockWorkflow = { id: "workflow-1", outputNode: "4", data: {} };
     const mockQueueResponse: QueuePromptResponse = {
       prompt_id: "prompt-123",
       number: 1,
@@ -61,281 +63,168 @@ describe("processJob", () => {
       status: { status_str: "success", completed: true, messages: [] },
       outputs: {
         "4": {
-          images: [
-            {
-              filename: "output_video.mp4",
-              subfolder: "videos",
-              type: "output",
-            },
-          ],
+          images: [{ filename: "output_video.mp4", subfolder: "videos", type: "output" }],
         },
       },
     };
 
-    mockedGetWorkflowById.mockResolvedValue(mockWorkflow);
     mockComfyApiInstance.queuePrompt.mockResolvedValue(mockQueueResponse);
     mockComfyApiInstance.getHistory.mockResolvedValue(mockHistoryEntry);
-    mockedHandleJobCompleted.mockResolvedValue(undefined);
 
-    const result = await processJob(jobId, mockConfig);
+    const result = await processJob(mockJobData, mockConfig);
 
     expect(result).toBe(true);
-    expect(mockedGetWorkflowById).toHaveBeenCalledWith(jobId, mockConfig);
-    expect(MockedComfyApi).toHaveBeenCalledWith("http://localhost:8188");
-    expect(mockComfyApiInstance.queuePrompt).toHaveBeenCalledWith(mockWorkflow.data);
+    expect(mockComfyApiInstance.uploadImage).toHaveBeenCalledWith("test.jpg", "base64data");
+    expect(mockComfyApiInstance.queuePrompt).toHaveBeenCalledWith(mockJobData.workflow);
     expect(mockComfyApiInstance.getHistory).toHaveBeenCalledWith("prompt-123");
     expect(mockedHandleJobCompleted).toHaveBeenCalledWith(
-      jobId,
+      "test-job-123",
       "test-output-path/videos/output_video.mp4",
       mockConfig
     );
   });
 
-  it("should throw error when queuePrompt returns null", async () => {
-    const jobId = "test-job-123";
-    const mockWorkflow = { id: "workflow-1", outputNode: "4", data: {} };
+  it("should upload multiple images", async () => {
+    const jobWithMultipleImages = {
+      ...mockJobData,
+      images: [
+        { name: "image1.jpg", imageBase64: "base64data1" },
+        { name: "image2.jpg", imageBase64: "base64data2" }
+      ]
+    };
 
-    mockedGetWorkflowById.mockResolvedValue(mockWorkflow);
+    mockComfyApiInstance.queuePrompt.mockResolvedValue({ prompt_id: "prompt-123", number: 1, node_errors: {} });
+    mockComfyApiInstance.getHistory.mockResolvedValue({
+      status: { completed: true },
+      outputs: { "4": { images: [{ filename: "test.mp4", subfolder: "", type: "output" }] } }
+    });
+
+    await processJob(jobWithMultipleImages, mockConfig);
+
+    expect(mockComfyApiInstance.uploadImage).toHaveBeenCalledTimes(2);
+    expect(mockComfyApiInstance.uploadImage).toHaveBeenCalledWith("image1.jpg", "base64data1");
+    expect(mockComfyApiInstance.uploadImage).toHaveBeenCalledWith("image2.jpg", "base64data2");
+  });
+
+  it("should throw error when queuePrompt fails", async () => {
     mockComfyApiInstance.queuePrompt.mockResolvedValue(null);
 
-    await expect(processJob(jobId, mockConfig)).rejects.toThrow(
-      "Failed to queue prompt"
-    );
-
-    expect(mockedGetWorkflowById).toHaveBeenCalledWith(jobId, mockConfig);
-    expect(mockComfyApiInstance.queuePrompt).toHaveBeenCalledWith(mockWorkflow.data);
+    await expect(processJob(mockJobData, mockConfig)).rejects.toThrow("Failed to queue prompt");
+    expect(mockComfyApiInstance.uploadImage).toHaveBeenCalled();
     expect(mockComfyApiInstance.getHistory).not.toHaveBeenCalled();
-    expect(mockedHandleJobCompleted).not.toHaveBeenCalled();
   });
 
   it("should throw error when max retries exceeded", async () => {
-    const jobId = "test-job-123";
-    const mockWorkflow = { id: "workflow-1", outputNode: "4", data: {} };
-    const mockQueueResponse: QueuePromptResponse = {
-      prompt_id: "prompt-123",
-      number: 1,
-      node_errors: {},
-    };
-
-    mockedGetWorkflowById.mockResolvedValue(mockWorkflow);
-    mockComfyApiInstance.queuePrompt.mockResolvedValue(mockQueueResponse);
+    mockComfyApiInstance.queuePrompt.mockResolvedValue({ prompt_id: "prompt-123", number: 1, node_errors: {} });
     mockComfyApiInstance.getHistory.mockResolvedValue({
-      prompt: {},
       status: { status_str: "running", completed: false, messages: [] },
       outputs: {},
     });
 
-    await expect(processJob(jobId, mockConfig)).rejects.toThrow(
-      `Job ${jobId} timed out after 3 attempts`
+    await expect(processJob(mockJobData, mockConfig)).rejects.toThrow(
+      "Job test-job-123 timed out after 3 attempts"
     );
-
-    expect(mockComfyApiInstance.getHistory).toHaveBeenCalledTimes(3); // maxRetries
-    expect(mockedHandleJobCompleted).not.toHaveBeenCalled();
+    expect(mockComfyApiInstance.getHistory).toHaveBeenCalledTimes(3);
   });
 
-  it("should throw error when no node found in outputs", async () => {
-    const jobId = "test-job-123";
-    const mockWorkflow = { id: "workflow-1", outputNode: "4", data: {} };
-    const mockQueueResponse: QueuePromptResponse = {
-      prompt_id: "prompt-123",
-      number: 1,
-      node_errors: {},
-    };
-    const mockHistoryEntry: HistoryEntry = {
-      prompt: {},
-      status: { status_str: "success", completed: true, messages: [] },
-      outputs: {}, // No node 4
-    };
-
-    mockedGetWorkflowById.mockResolvedValue(mockWorkflow);
-    mockComfyApiInstance.queuePrompt.mockResolvedValue(mockQueueResponse);
-    mockComfyApiInstance.getHistory.mockResolvedValue(mockHistoryEntry);
-
-    await expect(processJob(jobId, mockConfig)).rejects.toThrow("No video output found");
-
-    expect(mockedHandleJobCompleted).not.toHaveBeenCalled();
-  });
-
-  it("should throw error when node has no images", async () => {
-    const jobId = "test-job-123";
-    const mockWorkflow = { id: "workflow-1", outputNode: "4", data: {} };
-    const mockQueueResponse: QueuePromptResponse = {
-      prompt_id: "prompt-123",
-      number: 1,
-      node_errors: {},
-    };
-    const mockHistoryEntry: HistoryEntry = {
-      prompt: {},
-      status: { status_str: "success", completed: true, messages: [] },
-      outputs: {
-        "4": {
-          width: [1920],
-          height: [1080],
-          // No images array
-        },
-      },
-    };
-
-    mockedGetWorkflowById.mockResolvedValue(mockWorkflow);
-    mockComfyApiInstance.queuePrompt.mockResolvedValue(mockQueueResponse);
-    mockComfyApiInstance.getHistory.mockResolvedValue(mockHistoryEntry);
-
-    await expect(processJob(jobId, mockConfig)).rejects.toThrow("No video output found");
-
-    expect(mockedHandleJobCompleted).not.toHaveBeenCalled();
-  });
-
-  it("should throw error when no video found in images array", async () => {
-    const jobId = "test-job-123";
-    const mockWorkflow = { id: "workflow-1", outputNode: "4", data: {} };
-    const mockQueueResponse: QueuePromptResponse = {
-      prompt_id: "prompt-123",
-      number: 1,
-      node_errors: {},
-    };
-    const mockHistoryEntry: HistoryEntry = {
-      prompt: {},
-      status: { status_str: "success", completed: true, messages: [] },
-      outputs: {
-        "4": {
-          images: [], // Empty images array
-        },
-      },
-    };
-
-    mockedGetWorkflowById.mockResolvedValue(mockWorkflow);
-    mockComfyApiInstance.queuePrompt.mockResolvedValue(mockQueueResponse);
-    mockComfyApiInstance.getHistory.mockResolvedValue(mockHistoryEntry);
-
-    await expect(processJob(jobId, mockConfig)).rejects.toThrow("No video output found");
-
-    expect(mockedHandleJobCompleted).not.toHaveBeenCalled();
-  });
-
-  it("should handle history returning undefined and continue polling", async () => {
-    const jobId = "test-job-123";
-    const mockWorkflow = { id: "workflow-1", outputNode: "4", data: {} };
-    const mockQueueResponse: QueuePromptResponse = {
-      prompt_id: "prompt-123",
-      number: 1,
-      node_errors: {},
-    };
-
-    mockedGetWorkflowById.mockResolvedValue(mockWorkflow);
-    mockComfyApiInstance.queuePrompt.mockResolvedValue(mockQueueResponse);
-    // First two calls return undefined, then return completed job
+  it("should handle undefined history and continue polling", async () => {
+    mockComfyApiInstance.queuePrompt.mockResolvedValue({ prompt_id: "prompt-123", number: 1, node_errors: {} });
     mockComfyApiInstance.getHistory
       .mockResolvedValueOnce(undefined)
-      .mockResolvedValueOnce(undefined)
       .mockResolvedValue({
-        prompt: {},
-        status: { status_str: "success", completed: true, messages: [] },
-        outputs: {
-          "4": {
-            images: [
-              {
-                filename: "output_video.mp4",
-                subfolder: "videos",
-                type: "output",
-              },
-            ],
-          },
-        },
+        status: { completed: true },
+        outputs: { "4": { images: [{ filename: "test.mp4", subfolder: "", type: "output" }] } }
       });
-    mockedHandleJobCompleted.mockResolvedValue(undefined);
 
-    const result = await processJob(jobId, mockConfig);
+    const result = await processJob(mockJobData, mockConfig);
 
     expect(result).toBe(true);
-    expect(mockComfyApiInstance.getHistory).toHaveBeenCalledTimes(3);
-    expect(mockedHandleJobCompleted).toHaveBeenCalledWith(
-      jobId,
-      "test-output-path/videos/output_video.mp4",
-      mockConfig
-    );
+    expect(mockComfyApiInstance.getHistory).toHaveBeenCalledTimes(2);
   });
 
-  it("should propagate errors from getWorkflowById", async () => {
-    const jobId = "test-job-123";
-    const error = new Error("Workflow not found");
+  it("should propagate upload errors", async () => {
+    mockComfyApiInstance.uploadImage.mockRejectedValue(new Error("Upload failed"));
 
-    mockedGetWorkflowById.mockRejectedValue(error);
-
-    await expect(processJob(jobId, mockConfig)).rejects.toThrow("Workflow not found");
-
-    expect(MockedComfyApi).toHaveBeenCalledWith("http://localhost:8188");
+    await expect(processJob(mockJobData, mockConfig)).rejects.toThrow("Upload failed");
     expect(mockComfyApiInstance.queuePrompt).not.toHaveBeenCalled();
   });
 
-  it("should propagate errors from handleJobCompleted", async () => {
-    const jobId = "test-job-123";
-    const mockWorkflow = { id: "workflow-1", outputNode: "4", data: {} };
-    const mockQueueResponse: QueuePromptResponse = {
-      prompt_id: "prompt-123",
-      number: 1,
-      node_errors: {},
-    };
-    const mockHistoryEntry: HistoryEntry = {
-      prompt: {},
-      status: { status_str: "success", completed: true, messages: [] },
-      outputs: {
-        "4": {
-          images: [
-            {
-              filename: "output_video.mp4",
-              subfolder: "videos",
-              type: "output",
-            },
-          ],
-        },
-      },
-    };
-    const error = new Error("Failed to upload to S3");
+  it("should propagate handleJobCompleted errors", async () => {
+    mockComfyApiInstance.queuePrompt.mockResolvedValue({ prompt_id: "prompt-123", number: 1, node_errors: {} });
+    mockComfyApiInstance.getHistory.mockResolvedValue({
+      status: { completed: true },
+      outputs: { "4": { images: [{ filename: "test.mp4", subfolder: "", type: "output" }] } }
+    });
+    mockedHandleJobCompleted.mockRejectedValue(new Error("S3 upload failed"));
 
-    mockedGetWorkflowById.mockResolvedValue(mockWorkflow);
-    mockComfyApiInstance.queuePrompt.mockResolvedValue(mockQueueResponse);
-    mockComfyApiInstance.getHistory.mockResolvedValue(mockHistoryEntry);
-    mockedHandleJobCompleted.mockRejectedValue(error);
-
-    await expect(processJob(jobId, mockConfig)).rejects.toThrow("Failed to upload to S3");
-
-    expect(mockedHandleJobCompleted).toHaveBeenCalledWith(
-      jobId,
-      "test-output-path/videos/output_video.mp4",
-      mockConfig
-    );
+    await expect(processJob(mockJobData, mockConfig)).rejects.toThrow("S3 upload failed");
   });
 });
 
 describe("extractVideoPath", () => {
-  it("should extract the video path from the history entry", () => {
-    const historyEntry: HistoryEntry = {
+  it("should extract video path with subfolder", () => {
+    const history: HistoryEntry = {
       prompt: {},
       status: { status_str: "success", completed: true, messages: [] },
       outputs: {
         "4": {
-          images: [
-            {
-              filename: "output_video.mp4",
-              subfolder: "videos",
-              type: "output",
-            },
-          ],
+          images: [{ filename: "output.mp4", subfolder: "videos", type: "output" }],
         },
       },
     };
 
-    const result = extractVideoPath(historyEntry, "test-output-path");
-    expect(result).toBe("test-output-path/videos/output_video.mp4");
+    const result = extractVideoPath(history, "test-output-path", "4");
+    expect(result).toBe("test-output-path/videos/output.mp4");
   });
 
-  it("should throw error if no video output found", () => {
-    const historyEntry: HistoryEntry = {
+  it("should extract video path without subfolder", () => {
+    const history: HistoryEntry = {
+      prompt: {},
+      status: { status_str: "success", completed: true, messages: [] },
+      outputs: {
+        "4": {
+          images: [{ filename: "output.mp4", subfolder: "", type: "output" }],
+        },
+      },
+    };
+
+    const result = extractVideoPath(history, "test-output-path", "4");
+    expect(result).toBe("test-output-path/output.mp4");
+  });
+
+  it("should throw error when no node 4 found", () => {
+    const history: HistoryEntry = {
       prompt: {},
       status: { status_str: "success", completed: true, messages: [] },
       outputs: {},
     };
 
-    expect(() => extractVideoPath(historyEntry, "test-output-path")).toThrow("No video output found");
+    expect(() => extractVideoPath(history, "test-output-path", "4")).toThrow("No video output found in job results");
+  });
+
+  it("should throw error when no images in node 4", () => {
+    const history: HistoryEntry = {
+      prompt: {},
+      status: { status_str: "success", completed: true, messages: [] },
+      outputs: {
+        "4": { width: [1920], height: [1080] },
+      },
+    };
+
+    expect(() => extractVideoPath(history, "test-output-path", "4")).toThrow("No video output found in job results");
+  });
+
+  it("should throw error when no filename", () => {
+    const history: HistoryEntry = {
+      prompt: {},
+      status: { status_str: "success", completed: true, messages: [] },
+      outputs: {
+        "4": {
+          images: [{ subfolder: "videos", type: "output" } as any],
+        },
+      },
+    };
+
+    expect(() => extractVideoPath(history, "test-output-path", "4")).toThrow("Video output missing filename");
   });
 });

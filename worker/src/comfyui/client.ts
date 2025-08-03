@@ -49,4 +49,28 @@ export class ComfyApi {
     const history: HistoryResponse = await response.json() as HistoryResponse;
     return history[promptId];
   }
+
+  async uploadImage(imageName: string, imageBase64: string): Promise<boolean> {
+    let binary: Buffer;
+    try {
+      binary = Buffer.from(imageBase64, "base64");
+    } catch (e) {
+      throw new Error(`Failed to decode base64 for ${imageName}: ${e}`);
+    }
+    const formData = new FormData();
+    formData.append("image", new Blob([binary], { type: "image/png" }), imageName);
+    formData.append("type", "input");
+    formData.append("overwrite", "true");
+
+    const response = await this.fetchApi("/upload/image", {
+      method: "POST",
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to upload image: ${response.status} ${response.statusText}`);
+    }
+
+    return true;
+  }
 }

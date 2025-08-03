@@ -8,7 +8,6 @@ export interface S3Config {
 export interface ConfigParameters {
   comfyuiApiUrl: string;
   completeWebhookUrl: string;
-  workflowApiUrl: string;
   redisUrl: string;
   queueName: string;
   jobName: string;
@@ -21,7 +20,6 @@ export interface ConfigParameters {
 export class Config {
   private readonly comfyuiApiUrl: string;
   private readonly completeWebhookUrl: string;
-  private readonly workflowApiUrl: string;
   private readonly redisUrl: string;
   private readonly queueName: string;
   private readonly jobName: string;
@@ -33,7 +31,6 @@ export class Config {
   constructor(params: ConfigParameters) {
     this.comfyuiApiUrl = params.comfyuiApiUrl;
     this.completeWebhookUrl = params.completeWebhookUrl;
-    this.workflowApiUrl = params.workflowApiUrl;
     this.redisUrl = params.redisUrl;
     this.queueName = params.queueName;
     this.jobName = params.jobName;
@@ -75,10 +72,6 @@ export class Config {
     return this.completeWebhookUrl;
   }
 
-  getWorkflowApiUrl() {
-    return this.workflowApiUrl;
-  }
-
   getComfyuiOutputPath() {
     return this.comfyuiOutputPath;
   }
@@ -88,7 +81,6 @@ export function loadConfig() {
   const config = new Config({
     comfyuiApiUrl: process.env.COMFYUI_API_URL || "",
     completeWebhookUrl: process.env.COMPLETE_WEBHOOK_URL || "",
-    workflowApiUrl: process.env.WORKFLOW_API_URL || "",
     redisUrl: process.env.REDIS_URL || "",
     queueName: process.env.QUEUE_NAME || "",
     jobName: process.env.JOB_NAME || "",
