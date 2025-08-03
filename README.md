@@ -1,0 +1,44 @@
+# ComfyUI Redis Worker
+
+### Request Format
+
+Jobs are submitted to the worker via Redis. A request may look like this:
+
+```json
+{
+  "jobId": "123"
+}
+```
+
+### Workflow Endpoint
+
+The worker will fetch the workflow from the `GET ${WORKFLOW_API_URL}/{id}` endpoint and process the job. The workflow endpoint is expected to return a JSON object with the following format:
+
+```json
+{
+  "id": "123",
+  "outputNode": "output_node",
+  "data": {
+    "prompt": "A beautiful sunset over a calm ocean"
+  }
+}
+```
+
+### Environment Variables
+
+The following table lists the available environment variables and their default values.
+
+| Variable              | Default Value  | Description         |
+| --------------------- | -------------- | ------------------- |
+| COMFYUI_API_URL       |          | The URL of the ComfyUI API.                       |
+| COMPLETE_WEBHOOK_URL  |          | The URL of the webhook to call when the job is complete.    |
+| WORKFLOW_API_URL      |          | The URL of the workflow API.                      |
+| REDIS_URL             |          | The URL of the Redis server.                      |
+| QUEUE_NAME            |          | The name of the queue to use.                     |
+| JOB_NAME              |          | The name of the job to process.                   |
+| MAX_RETRIES           | 60 * 20  | The maximum number of retries to attempt.        |
+| POLL_INTERVAL_SEC     | 1        | The interval in seconds to poll the job status.  |
+| S3_ACCESS_KEY_ID      |          | The AWS access key ID.                 |
+| S3_SECRET_ACCESS_KEY  |          | The AWS secret access key.                       |
+| S3_BUCKET             |          | The AWS S3 bucket to use.                        |
+| S3_ENDPOINT           |          | The AWS S3 endpoint to use.                      |

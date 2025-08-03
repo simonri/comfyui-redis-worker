@@ -6,7 +6,7 @@ export async function processJob(jobId: string, config: Config): Promise<boolean
   console.log(`Processing ${jobId}`);
   const client = new ComfyApi(config.getComfyuiApiUrl());
 
-  const workflow = await getWorkflowById(jobId);
+  const workflow = await getWorkflowById(jobId, config);
 
   const job = await client.queuePrompt(workflow);
   if (!job) {
