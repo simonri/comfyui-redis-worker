@@ -6,6 +6,10 @@ services:
     ports:
       - "3000:3000"
       - "8188:8188"
+    volumes:
+      - ./comfyui-input:/comfyui/input
+      - ./comfyui-output:/comfyui/output
+      - ./comfyui-models:/comfyui/models
     deploy:
       resources:
         reservations:

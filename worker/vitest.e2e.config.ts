@@ -10,5 +10,6 @@ export default {
     testTimeout: 90_000,
     reporters: ["default"],
     silent: false,
+    parallel: false,
   },
 };
