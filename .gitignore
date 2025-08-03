@@ -139,3 +139,4 @@ test/docker-image/models
 scratch
 
 test/output/*.png
+junit.xml

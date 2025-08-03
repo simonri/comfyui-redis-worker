@@ -7,8 +7,9 @@
     "dev": "bun run src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "coverage": "vitest run --coverage",
-    "build": "tsc"
+    "test:ci": "vitest run --coverage",
+    "build": "tsc --build",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/bun": "latest",
