@@ -1,0 +1,22 @@
+#!/bin/bash
+docker compose -f docker-compose.e2e.yml up -d
+
+# Wait for "To see the GUI go to" in comfyui-base logs
+echo "Waiting for startup message..."
+timeout=60  # max wait time in seconds
+interval=1  # polling interval in seconds
+elapsed=0
+
+while ! docker compose -f docker-compose.e2e.yml logs comfyui-base 2>&1 | grep -q "To see the GUI go to"; do
+  sleep $interval
+  elapsed=$((elapsed + interval))
+  if [ $elapsed -ge $timeout ]; then
+    echo "Timeout waiting for startup message."
+    exit 1
+  fi
+done
+
+echo "Startup message detected. Proceeding with tests."
+
+cd worker/e2e
+bun run test:e2e

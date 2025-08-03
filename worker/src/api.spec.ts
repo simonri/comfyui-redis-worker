@@ -38,7 +38,11 @@ describe("getWorkflowById", () => {
     const config = loadConfig();
     const result = await getWorkflowById("123", config);
 
-    expect(mockFetch).toHaveBeenCalledWith("https://api.example.com/123");
+    expect(mockFetch).toHaveBeenCalledWith("https://api.example.com/123", {
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
     expect(result).toEqual(fakeJson);
   });
 
@@ -81,11 +85,12 @@ describe("handleJobCompleted", () => {
       json: vi.fn().mockResolvedValue({})
     });
 
-    mockUploadVideoToS3.mockResolvedValue("test.mp4");
+    const expectedS3Key = "generated-uuid-key.mp4";
+    mockUploadVideoToS3.mockResolvedValue(expectedS3Key);
 
     await handleJobCompleted("123", "test.mp4", config);
 
-    expect(mockUploadVideoToS3).toHaveBeenCalledWith("test.mp4", "123", config);
+    expect(mockUploadVideoToS3).toHaveBeenCalledWith("test.mp4", expect.stringMatching(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.mp4$/), config);
 
     expect(mockFetch).toHaveBeenCalledWith(config.getCompleteWebhookUrl(), {
       method: "POST",
@@ -93,7 +98,8 @@ describe("handleJobCompleted", () => {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        videoKey: "test.mp4"
+        jobId: "123",
+        videoKey: expectedS3Key,
       })
     });
   });

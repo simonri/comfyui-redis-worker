@@ -2,6 +2,8 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    include: ["src/**/*.spec.ts"],
+    exclude: ["e2e/**"],
     reporters: ["default", "junit"],
     silent: true,
     outputFile: {

@@ -6,12 +6,13 @@ export async function uploadVideoToS3(filePath: string, destKey: string, config:
   const s3Config = config.getS3();
 
   const s3Client = new S3Client({
+    region: "us-east-1",
     credentials: {
       accessKeyId: s3Config.accessKeyId,
       secretAccessKey: s3Config.secretAccessKey,
     },
     endpoint: s3Config.endpoint,
-    region: "auto",
+    forcePathStyle: true,
   });
 
   const stats = await fs.stat(filePath);

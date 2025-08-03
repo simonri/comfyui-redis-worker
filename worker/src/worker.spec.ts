@@ -24,6 +24,7 @@ describe("processJob", () => {
       getComfyuiApiUrl: vi.fn().mockReturnValue("http://localhost:8188"),
       getMaxRetries: vi.fn().mockReturnValue(3),
       getPollIntervalSec: vi.fn().mockReturnValue(1),
+      getComfyuiOutputPath: vi.fn().mockReturnValue("test-output-path"),
     } as any;
 
     mockComfyApiInstance = {
@@ -249,7 +250,7 @@ describe("processJob", () => {
     expect(mockComfyApiInstance.getHistory).toHaveBeenCalledTimes(3);
     expect(mockedHandleJobCompleted).toHaveBeenCalledWith(
       jobId,
-      "videos/output_video.mp4",
+      "test-output-path/videos/output_video.mp4",
       mockConfig
     );
   });
@@ -300,7 +301,7 @@ describe("processJob", () => {
 
     expect(mockedHandleJobCompleted).toHaveBeenCalledWith(
       jobId,
-      "videos/output_video.mp4",
+      "test-output-path/videos/output_video.mp4",
       mockConfig
     );
   });
@@ -324,8 +325,8 @@ describe("extractVideoPath", () => {
       },
     };
 
-    const result = extractVideoPath(historyEntry);
-    expect(result).toBe("videos/output_video.mp4");
+    const result = extractVideoPath(historyEntry, "test-output-path");
+    expect(result).toBe("test-output-path/videos/output_video.mp4");
   });
 
   it("should throw error if no video output found", () => {
@@ -335,6 +336,6 @@ describe("extractVideoPath", () => {
       outputs: {},
     };
 
-    expect(() => extractVideoPath(historyEntry)).toThrow("No video output found");
+    expect(() => extractVideoPath(historyEntry, "test-output-path")).toThrow("No video output found");
   });
 });

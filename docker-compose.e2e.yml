@@ -1,0 +1,40 @@
+services:
+  comfyui-base:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+      - "8188:8188"
+    volumes:
+      - ./comfyui-input:/comfyui/input
+      - ./comfyui-output:/comfyui/output
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [ gpu ]
+              count: all
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - 6379:6379
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  localstack:
+    image: localstack/localstack
+    ports:
+      - "4566:4566"  # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External services
+    environment:
+      - SERVICES=s3
+
+volumes:
+  redis_data:
+  comfyui_output:
+  comfyui_input:

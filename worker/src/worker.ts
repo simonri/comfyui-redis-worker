@@ -4,7 +4,7 @@ import { Config } from "./config";
 import type { HistoryEntry } from "./comfyui/types";
 import { sleep } from "./utils";
 
-export function extractVideoPath(history: HistoryEntry): string {
+export function extractVideoPath(history: HistoryEntry, outputPath: string): string {
   const node = history.outputs?.[4];
   if (!node?.images?.[0]) {
     throw new Error('No video output found in job results');
@@ -15,7 +15,7 @@ export function extractVideoPath(history: HistoryEntry): string {
     throw new Error('Video output missing filename');
   }
 
-  return video.subfolder ? `${video.subfolder}/${video.filename}` : video.filename;
+  return video.subfolder ? `${outputPath}/${video.subfolder}/${video.filename}` : `${outputPath}/${video.filename}`;
 }
 
 export async function processJob(jobId: string, config: Config): Promise<boolean> {
@@ -24,7 +24,7 @@ export async function processJob(jobId: string, config: Config): Promise<boolean
   const client = new ComfyApi(config.getComfyuiApiUrl());
   const workflow = await getWorkflowById(jobId, config);
 
-  const job = await client.queuePrompt(workflow);
+  const job = await client.queuePrompt(workflow.data);
   if (!job) {
     throw new Error('Failed to queue prompt');
   }
@@ -41,7 +41,7 @@ export async function processJob(jobId: string, config: Config): Promise<boolean
       const history = await client.getHistory(job.prompt_id);
 
       if (history?.status?.completed) {
-        const filePath = extractVideoPath(history);
+        const filePath = extractVideoPath(history, config.getComfyuiOutputPath());
         await handleJobCompleted(jobId, filePath, config);
         console.log(`Job ${jobId} completed successfully`);
         return true;
