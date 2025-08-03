@@ -82,11 +82,11 @@ describe("processJob", () => {
     expect(result).toBe(true);
     expect(mockedGetWorkflowById).toHaveBeenCalledWith(jobId, mockConfig);
     expect(MockedComfyApi).toHaveBeenCalledWith("http://localhost:8188");
-    expect(mockComfyApiInstance.queuePrompt).toHaveBeenCalledWith(mockWorkflow);
+    expect(mockComfyApiInstance.queuePrompt).toHaveBeenCalledWith(mockWorkflow.data);
     expect(mockComfyApiInstance.getHistory).toHaveBeenCalledWith("prompt-123");
     expect(mockedHandleJobCompleted).toHaveBeenCalledWith(
       jobId,
-      "videos/output_video.mp4",
+      "test-output-path/videos/output_video.mp4",
       mockConfig
     );
   });
@@ -103,7 +103,7 @@ describe("processJob", () => {
     );
 
     expect(mockedGetWorkflowById).toHaveBeenCalledWith(jobId, mockConfig);
-    expect(mockComfyApiInstance.queuePrompt).toHaveBeenCalledWith(mockWorkflow);
+    expect(mockComfyApiInstance.queuePrompt).toHaveBeenCalledWith(mockWorkflow.data);
     expect(mockComfyApiInstance.getHistory).not.toHaveBeenCalled();
     expect(mockedHandleJobCompleted).not.toHaveBeenCalled();
   });
