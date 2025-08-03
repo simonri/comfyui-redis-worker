@@ -1,3 +1,10 @@
+export interface S3Config {
+  accessKeyId: string;
+  secretAccessKey: string;
+  bucket: string;
+  endpoint: string;
+}
+
 export interface ConfigParameters {
   comfyuiApiUrl: string;
   completeWebhookUrl: string;
@@ -7,10 +14,7 @@ export interface ConfigParameters {
   jobName: string;
   maxRetries: number;
   pollIntervalSec: number;
-  s3AccessKeyId: string;
-  s3SecretAccessKey: string;
-  s3Bucket: string;
-  s3Endpoint: string;
+  s3: S3Config;
 }
 
 export class Config {
@@ -22,10 +26,7 @@ export class Config {
   private readonly jobName: string;
   private readonly maxRetries: number;
   private readonly pollIntervalSec: number;
-  private readonly s3AccessKeyId: string;
-  private readonly s3SecretAccessKey: string;
-  private readonly s3Bucket: string;
-  private readonly s3Endpoint: string;
+  private readonly s3: S3Config;
 
   constructor(params: ConfigParameters) {
     this.comfyuiApiUrl = params.comfyuiApiUrl;
@@ -36,10 +37,7 @@ export class Config {
     this.jobName = params.jobName;
     this.maxRetries = params.maxRetries;
     this.pollIntervalSec = params.pollIntervalSec;
-    this.s3AccessKeyId = params.s3AccessKeyId;
-    this.s3SecretAccessKey = params.s3SecretAccessKey;
-    this.s3Bucket = params.s3Bucket;
-    this.s3Endpoint = params.s3Endpoint;
+    this.s3 = params.s3;
   }
 
   getComfyuiApiUrl() {
@@ -66,20 +64,8 @@ export class Config {
     return this.pollIntervalSec;
   }
 
-  getS3AccessKeyId() {
-    return this.s3AccessKeyId;
-  }
-
-  getS3SecretAccessKey() {
-    return this.s3SecretAccessKey;
-  }
-
-  getS3Bucket() {
-    return this.s3Bucket;
-  }
-
-  getS3Endpoint() {
-    return this.s3Endpoint;
+  getS3() {
+    return this.s3;
   }
 
   getCompleteWebhookUrl() {
@@ -101,10 +87,12 @@ export function loadConfig() {
     jobName: process.env.JOB_NAME || "",
     maxRetries: 60 * 20,
     pollIntervalSec: 1,
-    s3AccessKeyId: process.env.S3_ACCESS_KEY_ID || "",
-    s3SecretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
-    s3Bucket: process.env.S3_BUCKET || "",
-    s3Endpoint: process.env.S3_ENDPOINT || "",
+    s3: {
+      accessKeyId: process.env.S3_ACCESS_KEY_ID || "",
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || "",
+      bucket: process.env.S3_BUCKET || "",
+      endpoint: process.env.S3_ENDPOINT || "",
+    },
   });
 
   return config;

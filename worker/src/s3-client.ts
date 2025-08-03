@@ -1,14 +1,12 @@
-import { S3Client } from "@aws-sdk/client-s3";
-import type { Config } from "./config";
+import { S3Client } from "bun";
+import type { S3Config } from "./config";
 
-export function getS3Client(config: Config) {
+export function getS3Client(config: S3Config) {
   const s3Client = new S3Client({
-    credentials: {
-      accessKeyId: config.getS3AccessKeyId(),
-      secretAccessKey: config.getS3SecretAccessKey(),
-    },
-    region: 'auto',
-    endpoint: config.getS3Endpoint(),
+    accessKeyId: config.accessKeyId,
+    secretAccessKey: config.secretAccessKey,
+    endpoint: config.endpoint,
+    bucket: config.bucket,
   });
 
   return s3Client;

@@ -3,7 +3,7 @@ import type { Config } from "./config";
 import { getS3Client } from "./s3-client";
 
 export async function uploadVideoToS3(filePath: string, destKey: string, config: Config) {
-  const s3Client = getS3Client(config);
+  const s3Client = getS3Client(config.getS3());
 
   const stats = await fs.stat(filePath);
   if (!stats.isFile()) {
