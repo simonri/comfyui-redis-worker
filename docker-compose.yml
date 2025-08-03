@@ -1,0 +1,41 @@
+services:
+  comfyui-base:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+      - "8188:8188"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [ gpu ]
+              count: all
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - 6379:6379
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  worker:
+    build:
+      context: worker
+      dockerfile: Dockerfile
+    environment:
+      - COMFYUI_API_URL=http://comfyui-base:8188
+      - COMPLETE_WEBHOOK_URL=http://worker:3000/complete
+      - WORKFLOW_API_URL=http://worker:3000/workflows
+      - REDIS_URL=redis://redis:6379
+      - QUEUE_NAME=default
+      - JOB_NAME=default
+      - MAX_RETRIES=3
+      - POLL_INTERVAL_SEC=10
+
+volumes:
+  redis_data:
