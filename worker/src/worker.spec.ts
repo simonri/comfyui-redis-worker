@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { processJob } from "./worker";
+import { extractVideoPath, processJob } from "./worker";
 import { ComfyApi } from "./comfyui/client";
 import { getWorkflowById, handleJobCompleted } from "./api";
 import { Config } from "./config";
@@ -303,5 +303,38 @@ describe("processJob", () => {
       "videos/output_video.mp4",
       mockConfig
     );
+  });
+});
+
+describe("extractVideoPath", () => {
+  it("should extract the video path from the history entry", () => {
+    const historyEntry: HistoryEntry = {
+      prompt: {},
+      status: { status_str: "success", completed: true, messages: [] },
+      outputs: {
+        "4": {
+          images: [
+            {
+              filename: "output_video.mp4",
+              subfolder: "videos",
+              type: "output",
+            },
+          ],
+        },
+      },
+    };
+
+    const result = extractVideoPath(historyEntry);
+    expect(result).toBe("videos/output_video.mp4");
+  });
+
+  it("should throw error if no video output found", () => {
+    const historyEntry: HistoryEntry = {
+      prompt: {},
+      status: { status_str: "success", completed: true, messages: [] },
+      outputs: {},
+    };
+
+    expect(() => extractVideoPath(historyEntry)).toThrow("No video output found");
   });
 });

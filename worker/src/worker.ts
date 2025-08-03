@@ -4,7 +4,7 @@ import { Config } from "./config";
 import type { HistoryEntry } from "./comfyui/types";
 import { sleep } from "./utils";
 
-function extractVideoPath(history: HistoryEntry): string {
+export function extractVideoPath(history: HistoryEntry): string {
   const node = history.outputs?.[4];
   if (!node?.images?.[0]) {
     throw new Error('No video output found in job results');
