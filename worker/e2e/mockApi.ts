@@ -6,6 +6,7 @@ export function mockWebhooks() {
   let capturedWebhookBody: any = null;
 
   const webhook = nock("http://api.example.com")
+    .persist()
     .post("/webhook", (body) => {
       capturedWebhookBody = body;
       return true;
@@ -19,12 +20,20 @@ export function mockWebhooks() {
   };
 
   const workflow = nock("http://api.example.com")
-    .get("/workflow/123")
-    .reply(200, workflowResponse);
+    .persist()
+    .get(/\/workflow\/\d+/)
+    .reply(200, (uri) => {
+      const workflowId = uri.split('/').pop();
+      console.log(`Workflow requested for ID: ${workflowId}`);
+      return {
+        ...workflowResponse,
+        id: workflowId,
+      };
+    });
 
   return {
     webhook,
     workflow,
-    getWebhookBody: () => capturedWebhookBody
+    getWebhookBody: () => capturedWebhookBody,
   };
 }
