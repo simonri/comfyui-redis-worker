@@ -19,10 +19,23 @@ The worker will fetch the workflow from the `GET ${WORKFLOW_API_URL}/{id}` endpo
   "id": "123",
   "outputNode": "output_node",
   "data": {
-    "prompt": "A beautiful sunset over a calm ocean"
+    // workflow data api format
   }
 }
 ```
+
+### Webhook Endpoint
+
+The worker will call the `POST ${COMPLETE_WEBHOOK_URL}` endpoint with the following payload when the job is complete:
+
+```json
+{
+  "jobId": "123",
+  "videoKey": "s3-key"
+}
+```
+
+The `videoKey` is the key of the video in the S3 bucket.
 
 ### Environment Variables
 
@@ -42,3 +55,4 @@ The following table lists the available environment variables and their default 
 | S3_SECRET_ACCESS_KEY  |          | The AWS secret access key.                       |
 | S3_BUCKET             |          | The AWS S3 bucket to use.                        |
 | S3_ENDPOINT           |          | The AWS S3 endpoint to use.                      |
+| COMFYUI_OUTPUT_PATH   | /comfyui/output | The path to the ComfyUI output directory |

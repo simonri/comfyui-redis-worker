@@ -140,3 +140,5 @@ scratch
 
 test/output/*.png
 junit.xml
+comfyui-output/**/*
+!comfyui-output/.gitkeep

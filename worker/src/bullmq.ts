@@ -12,9 +12,9 @@ export function setupQueues(config: Config) {
     maxRetriesPerRequest: null,
   });
 
-  new Queue<JobData>(config.getQueueName(), { connection});
+  const queue = new Queue<JobData>(config.getQueueName(), { connection});
 
-  new Worker<JobData>(
+  const worker = new Worker<JobData>(
     config.getQueueName(),
     async (job) => {
       if (job.name === config.getJobName()) {
@@ -23,4 +23,6 @@ export function setupQueues(config: Config) {
     },
     { connection }
   );
+
+  return { queue, worker };
 }

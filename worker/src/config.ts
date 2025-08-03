@@ -15,6 +15,7 @@ export interface ConfigParameters {
   maxRetries: number;
   pollIntervalSec: number;
   s3: S3Config;
+  comfyuiOutputPath?: string;
 }
 
 export class Config {
@@ -27,6 +28,7 @@ export class Config {
   private readonly maxRetries: number;
   private readonly pollIntervalSec: number;
   private readonly s3: S3Config;
+  private readonly comfyuiOutputPath: string;
 
   constructor(params: ConfigParameters) {
     this.comfyuiApiUrl = params.comfyuiApiUrl;
@@ -38,6 +40,7 @@ export class Config {
     this.maxRetries = params.maxRetries;
     this.pollIntervalSec = params.pollIntervalSec;
     this.s3 = params.s3;
+    this.comfyuiOutputPath = params.comfyuiOutputPath || '/comfyui/output';
   }
 
   getComfyuiApiUrl() {
@@ -75,6 +78,10 @@ export class Config {
   getWorkflowApiUrl() {
     return this.workflowApiUrl;
   }
+
+  getComfyuiOutputPath() {
+    return this.comfyuiOutputPath;
+  }
 }
 
 export function loadConfig() {
@@ -93,6 +100,7 @@ export function loadConfig() {
       bucket: process.env.S3_BUCKET || "",
       endpoint: process.env.S3_ENDPOINT || "",
     },
+    comfyuiOutputPath: process.env.COMFYUI_OUTPUT_PATH,
   });
 
   return config;
