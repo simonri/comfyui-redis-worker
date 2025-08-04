@@ -15,18 +15,23 @@ export async function uploadVideoToS3(filePath: string, destKey: string, config:
     forcePathStyle: true,
   });
 
-  const stats = await fs.stat(filePath);
-  if (!stats.isFile()) {
-    throw new Error("Provided path is not a file");
+  try {
+    const stats = await fs.stat(filePath);
+    if (!stats.isFile()) {
+      throw new Error("Provided path is not a file");
+    }
+
+    const fileStream = await fs.readFile(filePath);
+    await s3Client.send(new PutObjectCommand({
+      Bucket: config.getS3().bucket,
+      Key: destKey,
+      Body: fileStream,
+      ContentType: "video/mp4",
+    }));
+
+    return destKey;
+  } catch (e) {
+    console.error(`Failed to upload video to S3: ${e}`);
+    throw new Error(`Failed to upload video to S3: ${e}`);
   }
-
-  const fileStream = await fs.readFile(filePath);
-  await s3Client.send(new PutObjectCommand({
-    Bucket: config.getS3().bucket,
-    Key: destKey,
-    Body: fileStream,
-    ContentType: "video/mp4",
-  }));
-
-  return destKey;
 }

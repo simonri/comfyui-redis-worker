@@ -11,6 +11,7 @@ export interface Workflow {
 }
 
 export async function handleJobCompleted(jobId: string, filePath: string, config: Config) {
+  console.log(`Handling job completed: ${jobId}, filePath: ${filePath}`);
   const destKey = `${uuidv4()}.mp4`;
   const s3Key = await uploadVideoToS3(filePath, destKey, config);
 

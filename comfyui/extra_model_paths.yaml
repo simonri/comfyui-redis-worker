@@ -12,3 +12,4 @@ runpod_worker_comfy:
   unet: models/unet/
   text_encoders: models/text_encoders/
   diffusion_models: models/diffusion_models/
+  ultralytics_bbox: models/ultralytics/bbox/

@@ -149,3 +149,5 @@ comfyui-models/**/*
 
 comfyui-input/**/*
 !comfyui-input/test-video.mp4
+
+aws

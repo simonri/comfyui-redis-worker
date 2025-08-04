@@ -19,7 +19,16 @@ export interface JobData {
 
 export function setupQueues(config: Config) {
   const connection = new Redis(config.getRedisUrl(), {
+    enableReadyCheck: true,
     maxRetriesPerRequest: null,
+    lazyConnect: true,
+    connectTimeout: 20000,
+    commandTimeout: 15000,
+    keepAlive: 30000,
+    family: 4,
+    autoResendUnfulfilledCommands: true,
+    autoResubscribe: true,
+    enableOfflineQueue: false,
   });
 
   const queue = new Queue<JobData>(config.getQueueName(), { connection});

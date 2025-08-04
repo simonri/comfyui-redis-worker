@@ -7,11 +7,11 @@ import type { JobData } from "./bullmq";
 
 export function extractVideoPath(history: HistoryEntry, outputPath: string, outputNode: string): string {
   const node = history.outputs?.[outputNode];
-  if (!node?.images?.[0]) {
+  if (!node?.gifs?.[0]) {
     throw new Error('No video output found in job results');
   }
 
-  const video = node.images[0];
+  const video = node.gifs[0];
   if (!video.filename) {
     throw new Error('Video output missing filename');
   }
@@ -28,15 +28,21 @@ export function extractVideoPath(history: HistoryEntry, outputPath: string, outp
  * 6. Send webhook
  */
 export async function processJob(job: JobData, config: Config): Promise<boolean> {
+  console.log(`Processing job: ${job.jobId}, outputNode: ${job.outputNode}`);
 
-  console.log(`Processing job: ${job.jobId}`);
+  if (JSON.stringify(job.workflow).includes('erax-anti-nsfw-yolo11m')) {
+    throw new Error('Erax anti-nsfw yolo11m is not supported');
+    return false;
+  }
 
   const client = new ComfyApi(config.getComfyuiApiUrl());
 
   for (const image of job.images) {
+    console.log(`Uploading image: ${image.name}`);
     await client.uploadImage(image.name, image.imageBase64);
   }
 
+  console.log(`Queuing prompt`);
   const comfyJob = await client.queuePrompt(job.workflow);
   if (!comfyJob) {
     throw new Error('Failed to queue prompt');

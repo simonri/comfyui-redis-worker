@@ -16,6 +16,8 @@ export class ComfyApi {
       options = {};
     }
 
+    console.log(`Fetching API: ${this.apiURL(route)}`);
+
     return fetch(this.apiURL(route), options);
   }
 
@@ -55,6 +57,7 @@ export class ComfyApi {
     try {
       binary = Buffer.from(imageBase64, "base64");
     } catch (e) {
+      console.log(`Failed to decode base64 for ${imageName}: ${e}`);
       throw new Error(`Failed to decode base64 for ${imageName}: ${e}`);
     }
     const formData = new FormData();
@@ -62,13 +65,22 @@ export class ComfyApi {
     formData.append("type", "input");
     formData.append("overwrite", "true");
 
-    const response = await this.fetchApi("/upload/image", {
-      method: "POST",
-      body: formData
-    });
+    try {
+      const response = await this.fetchApi("/upload/image", {
+        method: "POST",
+        body: formData
+      });
 
-    if (!response.ok) {
-      throw new Error(`Failed to upload image: ${response.status} ${response.statusText}`);
+      if (!response.ok) {
+        console.log(`Failed to upload image: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to upload image: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log(`Uploaded image: ${result}`);
+    } catch (e) {
+      console.log(`Failed to upload image: ${e}`);
+      throw new Error(`Failed to upload image: ${e}`);
     }
 
     return true;

@@ -18,19 +18,21 @@ services:
               capabilities: [ gpu ]
               count: all
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - 6380:6379
-    restart: unless-stopped
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - 6380:6379
+  #   restart: unless-stopped
+  #   command: redis-server --appendonly yes
+  #   volumes:
+  #     - redis_data:/data
 
   worker:
     build:
       context: worker
       dockerfile: Dockerfile
+    volumes:
+      - ./comfyui-output:/comfyui-output
     environment:
       - COMFYUI_API_URL=${COMFYUI_API_URL}
       - COMPLETE_WEBHOOK_URL=${COMPLETE_WEBHOOK_URL}
