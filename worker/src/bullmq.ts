@@ -25,10 +25,7 @@ export function setupQueues(config: Config) {
     connectTimeout: 20000,
     commandTimeout: 15000,
     keepAlive: 30000,
-    family: 4,
-    autoResendUnfulfilledCommands: true,
-    autoResubscribe: true,
-    enableOfflineQueue: false,
+    password: config.getRedisPassword(),
   });
 
   const queue = new Queue<JobData>(config.getQueueName(), { connection});
@@ -40,7 +37,16 @@ export function setupQueues(config: Config) {
         await processJob(job.data, config);
       }
     },
-    { connection }
+    {
+      connection,
+      concurrency: 1,
+      removeOnComplete: 100,
+      removeOnFail: 50,
+      settings: {
+        stalledInterval: 30000,  // Check for stalled jobs every 30s
+        maxStalledCount: 1,      // Mark as stalled after 1 check
+      }
+     }
   );
 
   return { queue, worker };

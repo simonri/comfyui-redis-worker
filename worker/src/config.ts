@@ -9,6 +9,7 @@ export interface ConfigParameters {
   comfyuiApiUrl: string;
   completeWebhookUrl: string;
   redisUrl: string;
+  redisPassword: string;
   queueName: string;
   jobName: string;
   maxRetries: number;
@@ -21,6 +22,7 @@ export class Config {
   private readonly comfyuiApiUrl: string;
   private readonly completeWebhookUrl: string;
   private readonly redisUrl: string;
+  private readonly redisPassword: string;
   private readonly queueName: string;
   private readonly jobName: string;
   private readonly maxRetries: number;
@@ -32,6 +34,7 @@ export class Config {
     this.comfyuiApiUrl = params.comfyuiApiUrl;
     this.completeWebhookUrl = params.completeWebhookUrl;
     this.redisUrl = params.redisUrl;
+    this.redisPassword = params.redisPassword;
     this.queueName = params.queueName;
     this.jobName = params.jobName;
     this.maxRetries = params.maxRetries;
@@ -46,6 +49,10 @@ export class Config {
 
   getRedisUrl() {
     return this.redisUrl;
+  }
+
+  getRedisPassword() {
+    return this.redisPassword;
   }
 
   getQueueName() {
@@ -82,6 +89,7 @@ export function loadConfig() {
     comfyuiApiUrl: process.env.COMFYUI_API_URL || "",
     completeWebhookUrl: process.env.COMPLETE_WEBHOOK_URL || "",
     redisUrl: process.env.REDIS_URL || "",
+    redisPassword: process.env.REDIS_PASSWORD || "",
     queueName: process.env.QUEUE_NAME || "",
     jobName: process.env.JOB_NAME || "",
     maxRetries: 60 * 20,
